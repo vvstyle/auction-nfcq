@@ -20,6 +20,7 @@ end
 def login type, username, password, org
   session = Capybara::Session.new(:selenium)
 
+  #session.visit 'http://192.168.10.201:8080/ras/'
   session.visit 'http://192.168.10.16:8018/ras/'
   session.click_link type
   session.fill_in 'j_username', with: username
@@ -42,6 +43,15 @@ end
 
 当(/^使用管理帐号登录到系统$/) do
   @admin = login_admin
+  class << @admin
+    alias origin_fill_in fill_in
+    def fill_in id, option
+      origin_fill_in id, option
+      execute_script "$('\##{id}').focusout()"
+    end
+
+
+  end
 end
 
 那么(/^应当看到已登录的界面标识$/) do
@@ -114,7 +124,7 @@ end
     t1 = Time.now + start_later.to_i * 60 * 60
     t2 = Time.now + end_later.to_i * 60 * 60
     @admin.fill_in 'timingStartTime', with: t1.strftime("%Y-%m-%d %H:%M:%S")
-    @admin.fill_in 'timingEndTime', with: t1.strftime("%Y-%m-%d %H:%M:%S")
+    @admin.fill_in 'timingEndTime', with: t2.strftime("%Y-%m-%d %H:%M:%S")
   end
 end
 
@@ -122,48 +132,32 @@ end
   @admin.within_frame '新增一次报价' do
     @admin.click_link 'btnSave'
     a = @admin.driver.browser.switch_to.alert
+    $stdin.gets
     a.accept  #处理modal对话框
+
   end  
 end
 
 那么(/^应该成功建立项目$/) do
   @admin.click_link '未开始项目'
   @admin.within_frame '未开始项目' do
+    $stdin.gets
     @admin.should have_content @new_project_sid
   end  
 end
 
-############
-############
-
-假如(/^使用如下帐户登录到主持人$/) do |table|
-  t = table.raw
-  username = t[0][0]
-  password = t[0][1]
-  org = t[0][2]
-  @zcr = login_zcr username, password, org
-  @zcr.should have_content('本机构报价项目')
-  @zcr.click_link '未开始项目'
-  sleep 3
-  @zcr.within_frame 1 do
-    @zcr.should have_content 'TESTORG2013110500004'
-    #@zcr.should have_xpath('//*[@id="datagrid-row-r1-1-0"]/td[2]/div/a')
-    @zcr.click_link 'TESTORG2013110500004'
-  end
-  gets
-end
-
-假如(/^使用如下帐户登录到报价人$/) do |table|
-  t = table.raw
-  username = t[0][0]
-  password = t[0][1]
-  org = t[0][2]
-  @bjr1 = login_bjr username, password, org
-  @bjr1.should have_content('通知')
-  gets
-end
 
 假如(/^使用如下帐户登录到查看人$/) do |table|
   # table is a Cucumber::Ast::Table
   pending # express the regexp above with the code you wish you had
+
+  竞价现场 do
+    主持人登录
+    报价人1登录
+    报价人2登录
+    主持人开始
+    报价人1加价1倍
+    报价人2加价1倍
+    报价人1加价1倍
+  end
 end
